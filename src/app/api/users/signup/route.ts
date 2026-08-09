@@ -2,6 +2,7 @@ import { connect } from "@/dbConfig/db";
 import User from "@/models/userModel";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { sendEmail } from "@/helpers/mailer";
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,17 @@ export async function POST(request: NextRequest) {
     const savedUser = await newUser.save();
 
     console.log("User created:", savedUser._id);
+
+    // Send verification email
+    try {
+      await sendEmail({
+        email: savedUser.email,
+        emailType: "VERIFY",
+        userId: savedUser._id.toString(),
+      });
+    } catch (emailError: unknown) {
+      console.warn("Could not send verification email:", emailError);
+    }
 
     return NextResponse.json(
       {

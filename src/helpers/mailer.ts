@@ -66,27 +66,34 @@ export const sendEmail = async ({
       !process.env.MAILTRAP_USER ||
       !process.env.MAILTRAP_KEY
     ) {
-      throw new Error("Mailtrap environment variables are not configured");
+      console.warn("Mailtrap/SMTP environment variables are not fully configured");
     }
 
-    if (!process.env.DOMAIN) {
-      throw new Error("DOMAIN is not configured");
-    }
+    const domain =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.DOMAIN ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "http://localhost:3000");
+
+    const cleanDomain = domain.replace(/\/$/, "");
 
     // Create transporter
     const transporter = nodemailer.createTransport({
-      host: process.env.MAILTRAP_HOST,
-      port: Number(process.env.MAILTRAP_PORT),
+      host: process.env.MAILTRAP_HOST || "smtp.mailtrap.io",
+      port: Number(process.env.MAILTRAP_PORT) || 2525,
       auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_KEY,
+        user: process.env.MAILTRAP_USER || "",
+        pass: process.env.MAILTRAP_KEY || "",
       },
     });
 
-    // Determine URL
-    const path = emailType === "VERIFY" ? "verify-email" : "reset-password";
+    // Determine URL (matching app route /verifyemail)
+    const path = emailType === "VERIFY" ? "verifyemail" : "reset-password";
 
-    const url = `${process.env.DOMAIN}/${path}?token=${token}`;
+    const url = `${cleanDomain}/${path}?token=${token}`;
 
     // Email content
     const actionText =
