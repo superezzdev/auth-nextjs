@@ -66,11 +66,11 @@ sequenceDiagram
 
     %% Signup Flow
     Note over User,SMTP: 1. User Registration Flow
-    User->>Browser: Enters Name, Email & Password
+    User->>Browser: Enters Name, Email and Password
     Browser->>API: POST /api/users/signup
     API->>API: bcrypt.hash(password, 10)
-    API->>API: crypto.randomBytes(32) & sha256 hash
-    API->>DB: Save User { password: hash, verifyToken: sha256, isVerified: false }
+    API->>API: crypto.randomBytes(32) and sha256 hash
+    API->>DB: Save User (password hash, verifyToken sha256, isVerified: false)
     API->>SMTP: sendEmail(type: "VERIFY", token)
     SMTP-->>User: Delivers Verification Link (/verifyemail?token=...)
     API-->>Browser: 201 Created
@@ -78,20 +78,20 @@ sequenceDiagram
     %% Verification Flow
     Note over User,DB: 2. Email Verification Flow
     User->>Browser: Clicks Email Link
-    Browser->>API: POST /api/users/verifyemail { token }
+    Browser->>API: POST /api/users/verifyemail (token)
     API->>API: sha256(token)
-    API->>DB: findOne({ verifyToken: hashedToken, verifyTokenExpiry: > now })
+    API->>DB: findOne(verifyToken: hashedToken, non-expired)
     API->>DB: user.isVerified = true, delete tokens
     API-->>Browser: 200 Email Verified
 
     %% Login Flow
-    Note over User,Browser: 3. Authentication & Cookie Issuance
+    Note over User,Browser: 3. Authentication and Cookie Issuance
     User->>Browser: Enters Credentials
     Browser->>API: POST /api/users/login
-    API->>DB: findOne({ email })
+    API->>DB: findOne(email)
     API->>API: bcrypt.compare(password, user.password)
-    API->>API: jwt.sign({ id, email, name }, JWT_SECRET, { expiresIn: "1h" })
-    API-->>Browser: Set-Cookie: token=JWT; HttpOnly; SameSite=Strict; Path=/
+    API->>API: jwt.sign(userPayload, JWT_SECRET, expiresIn: 1h)
+    API-->>Browser: Set-Cookie: token=JWT, HttpOnly, SameSite=Strict, Path=/
     Browser->>Browser: Redirects to /profile
 
     %% Protected Route
@@ -104,7 +104,7 @@ sequenceDiagram
         API->>DB: findById(token.id)
         API-->>Browser: Returns User Profile Data
     else No Token
-        Edge-->>Browser: 307 Redirect -> /login
+        Edge-->>Browser: 307 Redirect to /login
     end
 ```
 
