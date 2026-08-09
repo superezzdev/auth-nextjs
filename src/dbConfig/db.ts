@@ -1,22 +1,27 @@
 import mongoose from "mongoose";
 
+const MONGO_URI = process.env.MONGO_URI!;
+
+if (!MONGO_URI) {
+  throw new Error("Please define MONGO_URI in your .env file");
+}
+
 export async function connect() {
   try {
-    mongoose.connect(process.env.MONGO_URI! as string);
-    const connection = mongoose.connection;
+    if (mongoose.connection.readyState === 1) {
+      return;
+    }
 
-    connection.on("connected", () => {
-      console.log("MongoDB connected successfully");
-    });
-    connection.on("error", (err) => {
-      console.log(
-        "MongoDB connection error . Please make sure the MongoDB server is running",
-        err,
-      );
-      process.exit();
-    });
+    if (mongoose.connection.readyState === 2) {
+      await mongoose.connection.asPromise();
+      return;
+    }
+
+    await mongoose.connect(MONGO_URI);
+
+    console.log("MongoDB connected successfully");
   } catch (error) {
-    console.log("Error connecting to MongoDB:", error);
-    console.log(error);
+    console.error("MongoDB connection error:", error);
+    throw error;
   }
 }
