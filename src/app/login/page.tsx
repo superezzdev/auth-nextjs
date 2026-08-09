@@ -77,7 +77,7 @@ export default function LoginPage() {
           <p 
           onClick={onLogin}
           className="text-gray-500 mt-8 text-center">
-            Don't have an account?{" "}
+            Don&apos;t have an account
             <Link href="/signup" className="text-blue-500 hover:underline">
               Sign up
             </Link>
