@@ -4,26 +4,39 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  const isPublicPath =
-    path === "/login" || path === "/signup" || path.startsWith("/api/users");
+  const isPublicAuthPath = path === "/login" || path === "/signup";
+  const isPublicVerifyPath = path === "/verifyemail" || path === "/verify-email";
+  const isPublicApi = path.startsWith("/api/users/login") ||
+                      path.startsWith("/api/users/signup") ||
+                      path.startsWith("/api/users/verifyemail");
 
-  // Public routes don't need authentication
-  if (isPublicPath) {
+  const token = request.cookies.get("token")?.value || "";
+
+  // Redirect authenticated users away from login/signup to profile
+  if (isPublicAuthPath && token) {
+    return NextResponse.redirect(new URL("/profile", request.url));
+  }
+
+  // Allow public verification routes and public APIs
+  if (isPublicVerifyPath || isPublicApi || isPublicAuthPath) {
     return NextResponse.next();
   }
 
-  // Get JWT token from cookie
-  const token = request.cookies.get("token")?.value;
-
-  // No token → redirect to login
-  if (!token) {
+  // If trying to access protected paths without token -> redirect to login
+  if (!token && path.startsWith("/profile")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // User is authenticated
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/profile", "/login", "/signup", "/api/users/logout"],
+  matcher: [
+    "/profile/:path*",
+    "/login",
+    "/signup",
+    "/verifyemail",
+    "/verify-email",
+  ],
 };
+
