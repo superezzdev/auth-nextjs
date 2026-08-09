@@ -1,49 +1,80 @@
 import { connect } from "@/dbConfig/db";
-import User from "@/models/userMosel";
-import {NextRequest, NextResponse} from "next/server";
+import User from "@/models/userModel";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
- 
-
-
-
-connect();
-
 
 export async function POST(request: NextRequest) {
   try {
+    await connect();
+
     const reqBody = await request.json();
-    const { name, email, password } = reqBody; 
-    console.log("Received data:", { name, email, password });
-// Check if the user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 400 });
+
+    const { name, email, password } = reqBody;
+
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        {
+          error: "Name, email and password are required",
+        },
+        {
+          status: 400,
+        },
+      );
     }
 
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const normalizedEmail = email.trim().toLowerCase();
 
-    // Create the new user
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          error: "User already exists",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const newUser = new User({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
     });
 
     const savedUser = await newUser.save();
-    console.log("User created successfully:", savedUser);
 
-    return NextResponse.json({ message: "User created successfully", 
-      success: true,
-      savedUser
-    }, { status: 201 });
+    console.log("User created:", savedUser._id);
 
-
-
-
+    return NextResponse.json(
+      {
+        message: "User created successfully",
+        success: true,
+        user: {
+          id: savedUser._id,
+          name: savedUser.name,
+          email: savedUser.email,
+        },
+      },
+      {
+        status: 201,
+      },
+    );
   } catch (error: unknown) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
-  }
+    console.error("Signup error:", error);
 
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Something went wrong",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 }
